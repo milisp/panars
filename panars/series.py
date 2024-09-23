@@ -8,6 +8,15 @@ class Series:
         else:
             self._series = pl.Series(data)
 
+    def isin(self, values):
+        return self._series.is_in(values)
+
+    def isna(self):
+        return self._series.is_null()
+
+    def is_not_null(self):
+        return self._series.is_not_null()
+
     # 求和
     def sum(self):
         return self._series.sum()
@@ -52,6 +61,5 @@ class Series:
         return self._series <= other
 
     def apply(self, func):
-        '''使用 Python 的列表推导式模拟 apply''' 
+        """使用 Python 的列表推导式模拟 apply"""
         return pl.Series([func(x) for x in self._series])
-

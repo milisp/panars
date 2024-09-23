@@ -73,10 +73,7 @@ def add(x):
 
 
 def test_map():
-    df = pl.DataFrame({
-        "a": [1, 2, 3, 4],
-        "b": [5, 6, 7, 8]
-    })
+    df = pl.DataFrame({"a": [1, 2, 3, 4], "b": [5, 6, 7, 8]})
 
     wrapped_df = pa.DataFrame(df)
 
@@ -89,3 +86,14 @@ def test_map():
     mapped_df_by_col = wrapped_df.map(lambda x: x * 2, axis=1)
     print("Apply to columns:")
     print(mapped_df_by_col)
+
+
+def test_isin():
+    print(df.filter(df["A"].isin([8, 9])))
+    print(df.filter(df["A"].isin([3, 9])))
+
+
+def test_isna():
+    print(df.filter(df["A"].isna()))
+def test_is_not_null():
+    print(df.filter(df["A"].is_not_null()))
