@@ -10,3 +10,11 @@ def read_excel(file_path: str, **kwargs) -> pl.DataFrame:
     :return: Polars DataFrame
     """
     return pl.read_excel(file_path, **kwargs)
+
+
+def read_csv(file_path: str, **kwargs) -> pl.DataFrame:
+    return pl.read_csv(file_path, **kwargs)
+
+
+def scan_csv(file_path: str, **kwargs) -> pl.DataFrame:
+    return pl.scan_csv(file_path, **kwargs)

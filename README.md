@@ -1,6 +1,17 @@
 # panars
 Polars to Pandas Wrapper, 让 polars 像 pandas 一样的接口
 
+## install depends
+
+```bash
+pip install polars
+
+# Or for legacy CPUs without AVX2 support
+pip install polars-lts-cpu
+```
+
+## test case
+
 ```python
 import polars as pl
 
@@ -11,6 +22,9 @@ data = {"A": [1, 2, 3, 4], "B": [5, 6, 7, 8], "C": [1, 1, 2, 2]}
 # 创建DataFrame
 df = pa.DataFrame(data)
 df2 = pa.DataFrame({"A": [5, 6], "B": [9, 10], "C": [12, 13]})
+df3 = pa.DataFrame(
+    {"A": [5, 6], "B": [9, 10], "C": ["foo", "foo"], "city": ["London", "London"]}
+)
 
 
 def test_concat():
@@ -56,8 +70,8 @@ def test_sum():
 
 
 def test_groupby():
-    grouped = df.groupby("C")
-    print(grouped.sum())
+    df3.groupby(["C", "city"]).agg({"A": "mean", "B": ["min", "count", "max", "sum"]})
+    df.groupby("C").sum()
 
 
 def test_filter():

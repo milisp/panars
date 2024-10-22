@@ -7,6 +7,9 @@ data = {"A": [1, 2, 3, 4], "B": [5, 6, 7, 8], "C": [1, 1, 2, 2]}
 # 创建DataFrame
 df = pa.DataFrame(data)
 df2 = pa.DataFrame({"A": [5, 6], "B": [9, 10], "C": [12, 13]})
+df3 = pa.DataFrame(
+    {"A": [5, 6], "B": [9, 10], "C": ["foo", "foo"], "city": ["London", "London"]}
+)
 
 
 def test_concat():
@@ -52,8 +55,8 @@ def test_sum():
 
 
 def test_groupby():
-    grouped = df.groupby("C")
-    print(grouped.sum())
+    df3.groupby(["C", "city"]).agg({"A": "mean", "B": ["min", "count", "max", "sum"]})
+    df.groupby("C").sum()
 
 
 def test_filter():
@@ -62,6 +65,10 @@ def test_filter():
     print(df.filter(df["A"] < 2))
     print(df.filter(df["A"] == 2))
     print(df.iloc(1))
+
+
+def test_filter2():
+    print(df[df["A"] > 2])
 
 
 def test_drop():
@@ -95,5 +102,15 @@ def test_isin():
 
 def test_isna():
     print(df.filter(df["A"].isna()))
+
+
 def test_is_not_null():
     print(df.filter(df["A"].is_not_null()))
+
+
+def test_add_series():
+    print(df["A"] + df["B"])
+
+
+def test_to_pandas():
+    df["A"].to_pandas()

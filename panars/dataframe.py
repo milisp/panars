@@ -1,3 +1,5 @@
+from typing import List, Union
+
 import polars as pl
 
 from .series import Series
@@ -40,16 +42,6 @@ class DataFrame:
             return DataFrame(self.data.drop(columns))
         raise ValueError("Polars only supports dropping columns (axis=1)")
 
-    """
-    # 按键合并两个 DataFrame
-    def merge(self, right, on=None, how="inner"):
-        return DataFrame(self.data.join(right.data, on=on, how=how))
-    """
-
-    # 按列分组
-    def groupby(self, by):
-        return GroupBy(self.data.group_by(by))
-
     # 合并两个DataFrame（按行或列）
     @staticmethod
     def concat(dataframes: list, axis: int = 0, **kwargs) -> "DataFrame":
@@ -80,27 +72,46 @@ class DataFrame:
     # 设置列
     def __setitem__(self, key, value):
         if isinstance(value, Series):
-            self.data = self.data.with_column(value._series.alias(key))
+            self.data = self.data.with_columns(value._series.alias(key))
         else:
-            self.data = self.data.with_column(pl.Series(key, value))
+            self.data = self.data.with_columns(pl.Series(key, value))
 
-    # 通过列名获取列
     def __getitem__(self, key):
         if isinstance(key, str):
             return Series(self.data[key])
         elif isinstance(key, pl.Expr):
-            return self.data.filter(key)
-        elif isinstance(key, list):
-            return DataFrame(self.data[key])
+            return self.data.select(key)
+        elif isinstance(key, (list, dict, pl.Series)):
+            # 处理布尔索引
+            if isinstance(key, list):
+                key = pl.Series(key)
+            if isinstance(key, pl.Series) and key.dtype == pl.Boolean:
+                return DataFrame(self.data.filter(key))
+            else:
+                raise NotImplementedError("目前只支持布尔 Series 作为索引")
         else:
             raise KeyError(f"Unsupported key type: {type(key)}")
 
-    def filter(self, mask):
-        return DataFrame(self.data.filter(mask))
+    def groupby(self, by: Union[str, List[str]]) -> "GroupBy":
+        if not isinstance(by, list):
+            by = [by]
+        return GroupBy(self.data, by)
 
-    # 打印DataFrame信息
+    def __getattr__(self, name):
+        # 其他 DataFrame 方法的简单传递
+        if name in self.data.columns:
+            return Series(self.data[name])
+        return getattr(self.data, name)
+
     def __repr__(self):
         return self.data.__repr__()
+
+    def __len__(self):
+        return len(self.data)
+
+    def filter(self, mask):
+        print(mask)
+        return DataFrame(self.data.filter(mask))
 
     @staticmethod
     def merge(
@@ -131,21 +142,67 @@ class DataFrame:
             raise ValueError("Axis must be 0 (rows) or 1 (columns)")
 
 
+    def isin(self, column, values):
+        return self.data[column].is_in(values)
+
+    def show(self):
+        print(self.data)
+
+
 class GroupBy:
-    def __init__(self, groupby_obj):
-        self._groupby = groupby_obj
+    def __init__(self, df, by):
+        self._df = df
+        self.by = by
 
-    # 分组后求和
     def sum(self):
-        return DataFrame(self._groupby.agg(pl.col("*").sum()))
+        return DataFrame(self._df.group_by(self.by).agg(pl.col("*").sum()))
 
-    # 分组后求平均值
     def mean(self):
-        return DataFrame(self._groupby.agg(pl.col("*").mean()))
+        return DataFrame(self._df.group_by(self.by).agg(pl.col("*").mean()))
 
-    # 分组后应用自定义聚合函数
-    def agg(self, agg_funcs):
-        # agg_funcs是字典，key是列名，value是聚合函数
-        return DataFrame(
-            self._groupby.agg([agg_funcs[col](pl.col(col)) for col in agg_funcs])
-        )
+    def max(self):
+        return DataFrame(self._df.group_by(self.by).agg(pl.col("*").max()))
+
+    def min(self):
+        return DataFrame(self._df.group_by(self.by).agg(pl.col("*").min()))
+
+    def count(self):
+        return DataFrame(self._df.group_by(self.by).agg(pl.col("*").count()))
+
+    def agg(self, agg_spec):
+        aggs = []
+        if isinstance(agg_spec, dict):
+            for col, funcs in agg_spec.items():
+                if not isinstance(funcs, list):
+                    funcs = [funcs]
+                for func in funcs:
+                    aggs.append(self._get_agg_expr(col, func))
+        elif isinstance(agg_spec, str):
+            # 对所有非分组列应用同一聚合函数
+            funcs = [agg_spec]
+            data_cols = [col for col in self._df.columns if col not in self.by]
+            for col in data_cols:
+                for func in funcs:
+                    aggs.append(self._get_agg_expr(col, func))
+        else:
+            raise ValueError("agg_spec must be either a dict or a str")
+
+        result = self._df.group_by(self.by).agg(aggs)
+        return DataFrame(result)
+
+    def _get_agg_expr(self, col, func):
+        func = func.lower()
+        if func == "sum":
+            return pl.col(col).sum().alias(f"{col}_{func}")
+        elif func == "mean":
+            return pl.col(col).mean().alias(f"{col}_{func}")
+        elif func == "count":
+            return pl.col(col).count().alias(f"{col}_{func}")
+        elif func == "min":
+            return pl.col(col).min().alias(f"{col}_{func}")
+        elif func == "max":
+            return pl.col(col).max().alias(f"{col}_{func}")
+        else:
+            raise NotImplementedError(
+                f"Aggregation function '{func}' is not implemented"
+            )

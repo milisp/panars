@@ -17,13 +17,17 @@ class Series:
     def is_not_null(self):
         return self._series.is_not_null()
 
-    # 求和
     def sum(self):
         return self._series.sum()
 
-    # 求平均值
     def mean(self):
         return self._series.mean()
+
+    def head(self, n: int = 5) -> "Series":
+        return Series(self._series.head(n))
+
+    def tail(self, n: int = 5) -> "Series":
+        return Series(self._series.tail(n))
 
     # 按索引获取值
     def iloc(self, idx):
@@ -63,3 +67,46 @@ class Series:
     def apply(self, func):
         """使用 Python 的列表推导式模拟 apply"""
         return pl.Series([func(x) for x in self._series])
+
+    def add(self, other) -> "Series":
+        # Simple element-wise addition
+        if isinstance(other, Series):
+            return Series(self._series + other._series)
+        else:
+            return Series(self._series + other)
+
+    def __add__(self, other):
+        return self.add(other)
+
+    def mul(self, other) -> "Series":
+        # Simple element-wise addition
+        if isinstance(other, Series):
+            return Series(self._series * other._series)
+        else:
+            return Series(self._series * other)
+
+    def __mul__(self, other):
+        return self.mul(other)
+
+    def sub(self, other) -> "Series":
+        # Simple element-wise addition
+        if isinstance(other, Series):
+            return Series(self._series - other._series)
+        else:
+            return Series(self._series - other)
+
+    def __sub__(self, other):
+        return self.sub(other)
+
+    def truediv(self, other) -> "Series":
+        # Simple element-wise addition
+        if isinstance(other, Series):
+            return Series(self._series / other._series)
+        else:
+            return Series(self._series / other)
+
+    def __truediv__(self, other):
+        return self.truediv(other)
+
+    def to_pandas(self):
+        return self._series.to_pandas()

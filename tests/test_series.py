@@ -24,3 +24,8 @@ def test_isna():
 def test_isin():
     series = pa.Series([1, 3, 8])
     print(series.isin([3, 8]))
+
+
+def test_head():
+    series = pa.Series([1, 3, 8])
+    print(series.head())
