@@ -220,3 +220,35 @@ def test_melt():
     melt_df = pa.DataFrame(melt_data)
     melted = melt_df.melt(id_vars=["id"], value_vars=["A", "B"])
     assert "variable" in melted.df.columns and "value" in melted.df.columns
+
+def test_sort_values():
+    data = {"A": [3, 1, 2], "B": [6, 4, 5]}
+    df = pa.DataFrame(data)
+    
+    # Test sorting by a single column in ascending order
+    sorted_df = df.sort_values("A")
+    assert sorted_df["A"].to_list() == [1, 2, 3]
+    assert sorted_df["B"].to_list() == [4, 5, 6]
+    
+    # Test sorting by a single column in descending order
+    sorted_df_desc = df.sort_values("A", ascending=False)
+    assert sorted_df_desc["A"].to_list() == [3, 2, 1]
+    assert sorted_df_desc["B"].to_list() == [6, 5, 4]
+    
+    # Test sorting by multiple columns
+    data_multi = {"A": [1, 1, 2], "B": [3, 2, 1], "C": [6, 5, 4]}
+    df_multi = pa.DataFrame(data_multi)
+    sorted_df_multi = df_multi.sort_values(["A", "B"])
+    assert sorted_df_multi["A"].to_list() == [1, 1, 2]
+    assert sorted_df_multi["B"].to_list() == [2, 3, 1]
+    assert sorted_df_multi["C"].to_list() == [5, 6, 4]
+
+    # Test sorting after groupby
+    data_grouped = {"A": [1, 1, 2, 2], "B": [4, 3, 2, 1], "C": [10, 20, 30, 40]}
+    df_grouped = pa.DataFrame(data_grouped)
+    
+    grouped_sorted = df_grouped.groupby("A").agg({"B": "sum", "C": "mean"}).sort_values("B_sum", ascending=False)
+    
+    assert grouped_sorted["A"].to_list() == [1, 2]
+    assert grouped_sorted["B_sum"].to_list() == [7, 3]
+    assert grouped_sorted["C_mean"].to_list() == [15.0, 35.0]

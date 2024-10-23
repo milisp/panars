@@ -212,6 +212,14 @@ class DataFrame:
     def filter(self, expression):
         return DataFrame(self.df.filter(expression))
 
+    def sort_values(self, by: Union[str, List[str]], ascending: bool = True) -> "DataFrame":
+        if isinstance(by, str):
+            by = [by]
+        validate_column(self.df, by)
+        sorted_df = self.df.sort(by, descending=not ascending)
+        return DataFrame(sorted_df)
+
+
     def __gt__(self, other):
         return self.df > other
 
@@ -289,7 +297,6 @@ class DataFrame:
     def __repr__(self):
         return self.df.__repr__()
 
-
 class GroupBy:
     def __init__(self, df, by):
         self._df = df
@@ -347,4 +354,3 @@ class GroupBy:
             raise NotImplementedError(
                 f"Aggregation function '{func}' is not implemented"
             )
-
