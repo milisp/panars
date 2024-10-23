@@ -1,122 +1,79 @@
-from typing import List, Union
+from typing import Any, List, Union
 
 import polars as pl
 
 from .series import Series
+from .utils import validate_column
 
 
 class DataFrame:
-    def __init__(self, data):
-        if isinstance(data, pl.DataFrame):
-            self.data = data
+    def __init__(self, data: Union[pl.DataFrame, dict, list, "DataFrame"] = None):
+        if isinstance(data, DataFrame):
+            self.df = data.df.clone()
+        elif isinstance(data, pl.DataFrame):
+            self.df = data
+        elif isinstance(data, dict) or isinstance(data, list):
+            self.df = pl.DataFrame(data)
+        elif data is None:
+            self.df = pl.DataFrame()
         else:
-            self.data = pl.DataFrame(data)
+            raise TypeError("Unsupported data type for DataFrame initialization.")
 
-    # 返回DataFrame的前几行
     def head(self, n=5):
-        return DataFrame(self.data.head(n))
+        return DataFrame(self.df.head(n))
 
-    # 返回DataFrame的后几行
     def tail(self, n=5):
-        return DataFrame(self.data.tail(n))
+        return DataFrame(self.df.tail(n))
 
-    # 按行或列求和
     def sum(self, axis=None):
         if axis == 1:
             # 按行求和
             return DataFrame(
-                self.data.select(
-                    [pl.sum_horizontal(pl.col(c)) for c in self.data.columns]
+                self.df.select(
+                    [pl.sum_horizontal(pl.col(c)) for c in self.df.columns]
                 )
             )
         # 默认按列求和
-        return DataFrame(self.data.sum())
+        return DataFrame(self.df.sum())
 
-    # 按行或列求平均值
     def mean(self):
-        return DataFrame(self.data.mean())
+        return DataFrame(self.df.mean())
 
     # 删除列
     def drop(self, columns, axis=1):
         if axis == 1:
-            return DataFrame(self.data.drop(columns))
+            return DataFrame(self.df.drop(columns))
         raise ValueError("Polars only supports dropping columns (axis=1)")
 
     # 合并两个DataFrame（按行或列）
     @staticmethod
     def concat(dataframes: list, axis: int = 0, **kwargs) -> "DataFrame":
         if axis == 0:
-            concatenated_data = pl.concat([df.data for df in dataframes], **kwargs)
+            concatenated_data = pl.concat([df.df for df in dataframes], **kwargs)
         elif axis == 1:
             concatenated_data = pl.concat(
-                [df.data for df in dataframes], how="horizontal", **kwargs
+                [df.df for df in dataframes], how="horizontal", **kwargs
             )
         else:
             raise ValueError("Invalid axis: choose 0 for rows or 1 for columns.")
 
         return DataFrame(concatenated_data)
 
-    # 按位置选择行 (模拟 Pandas 的 iloc)
-    def iloc(self, idx):
-        return DataFrame(self.data[idx : idx + 1])
-
-    # 实现 loc 方法，支持使用布尔条件
-    def loc(self, condition):
-        if isinstance(condition, pl.Expr):
-            # 使用 Polars 的 filter 方法进行过滤
-            return DataFrame(self.data.filter(condition))
-        else:
-            raise ValueError("Condition must be a Polars expression")
-
-    # 设置列
-    def __setitem__(self, key, value):
-        if isinstance(value, Series):
-            self.data = self.data.with_columns(value._series.alias(key))
-        else:
-            self.data = self.data.with_columns(pl.Series(key, value))
-
-    def __getitem__(self, key):
-        if isinstance(key, str):
-            return Series(self.data[key])
-        elif isinstance(key, pl.Expr):
-            return self.data.select(key)
-        elif isinstance(key, (list, dict, pl.Series)):
-            # 处理布尔索引
-            if isinstance(key, list):
-                key = pl.Series(key)
-            if isinstance(key, pl.Series) and key.dtype == pl.Boolean:
-                return DataFrame(self.data.filter(key))
-            else:
-                raise NotImplementedError("目前只支持布尔 Series 作为索引")
-        else:
-            raise KeyError(f"Unsupported key type: {type(key)}")
-
-    def groupby(self, by: Union[str, List[str]]) -> "GroupBy":
-        if not isinstance(by, list):
-            by = [by]
-        return GroupBy(self.data, by)
-
-    def __getattr__(self, name):
-        # 其他 DataFrame 方法的简单传递
-        if name in self.data.columns:
-            return Series(self.data[name])
-        return getattr(self.data, name)
-
-    def __repr__(self):
-        return self.data.__repr__()
-
-    def __len__(self):
-        return len(self.data)
-
-    def filter(self, mask):
-        return DataFrame(self.data.filter(mask))
-
     @staticmethod
     def merge(
         left: "DataFrame", right: "DataFrame", on=None, how="inner", **kwargs
     ) -> "DataFrame":
-        merged_data = left.data.join(right.data, on=on, how=how, **kwargs)
+        merged_data = left.df.join(right.df, on=on, how=how, **kwargs)
         return DataFrame(merged_data)
+
+    # 按位置选择行 (模拟 Pandas 的 iloc)
+    def iloc(self, idx):
+        return DataFrame(self.df[idx : idx + 1])
+    
+    def groupby(self, by: Union[str, List[str]]) -> "GroupBy":
+        if not isinstance(by, list):
+            by = [by]
+        return GroupBy(self.df, by)
 
     def map(self, func, axis=0):
         """
@@ -128,34 +85,193 @@ class DataFrame:
         mapped_df_by_col = wrapped_df.map(lambda x: x * 2, axis=1)
         """
         if axis == 0:  # Apply function to each row
-            mapped_rows = [func(row) for row in self.data.rows()]
-            return pl.DataFrame(mapped_rows, schema=self.data.schema)
+            mapped_rows = [func(row) for row in self.df.rows()]
+            return pl.DataFrame(mapped_rows, schema=self.df.schema)
         elif axis == 1:  # Apply function to each column
             mapped_columns = {
-                col: pl.Series(col, [func(x) for x in self.data[col].to_list()])
-                for col in self.data.columns
+                col: pl.Series(col, [func(x) for x in self.df[col].to_list()])
+                for col in self.df.columns
             }
             return pl.DataFrame(mapped_columns)
         else:
             raise ValueError("Axis must be 0 (rows) or 1 (columns)")
 
     def isin(self, column, values):
-        return self.data[column].is_in(values)
+        return self.df[column].is_in(values)
+
+    def info(self):
+        print(self.df)
+
+    def describe(self) -> "DataFrame":
+        return DataFrame(self.df.describe())
 
     def show(self):
-        print(self.data)
+        print(self.df)
+
+    def loc(self, condition: Any) -> "DataFrame":
+        filtered_df = self.df.filter(condition)
+        return DataFrame(filtered_df)
+
+    def isnull(self) -> "DataFrame":
+        return DataFrame(self.df.is_null())
+
+    def dropna(
+        self, subset: Union[str, List[str]] = None, how: str = "any"
+    ) -> "DataFrame":
+        return DataFrame(self.df.drop_nulls(subset=subset))  # , how=how))
+
+    def fillna(self, value: Any, columns: Union[str, List[str]] = None) -> "DataFrame":
+        if columns:
+            if isinstance(columns, str):
+                columns = [columns]
+            validate_column(self.df, columns)
+            for col in columns:
+                self.df = self.df.with_columns(pl.col(col).fill_null(value))
+        else:
+            self.df = self.df.fill_null(value)
+        return self
+
+    def add(self, other, on: Union[str, List[str]] = None) -> "DataFrame":
+        # Simple element-wise addition
+        if isinstance(other, DataFrame):
+            return DataFrame(self.df + other.df)
+        else:
+            return DataFrame(self.df + other)
+
+    def multiply(self, other, on: Union[str, List[str]] = None) -> "DataFrame":
+        # Simple element-wise multiplication
+        if isinstance(other, DataFrame):
+            return DataFrame(self.df * other.df)
+        else:
+            return DataFrame(self.df * other)
+
+    def __add__(self, other):
+        return self.add(other)
+
+    def __sub__(self, other):
+        if isinstance(other, DataFrame):
+            return DataFrame(self.df - other.df)
+        elif isinstance(other, (int, float)):
+            return DataFrame(self.df - other)
+        else:
+            return NotImplemented
+
+    def __mul__(self, other):
+        return self.multiply(other)
+
+    def pivot(
+        self, pivot_column: str, values_column: str, aggregate_func: str = "first"
+    ) -> "DataFrame":
+        pivoted = self.df.pivot(values_column, pivot_column, aggregate_func)
+        return DataFrame(pivoted)
+
+    def melt(
+        self, id_vars: Union[str, List[str]], value_vars: Union[str, List[str]]
+    ) -> "DataFrame":
+        melted = self.df.melt(id_vars=id_vars, value_vars=value_vars)
+        return DataFrame(melted)
+
+    def to_datetime(self, column: str, fmt: str = None) -> "DataFrame":
+        self.df = self.df.with_columns(
+            pl.col(column).str.strptime(pl.Datetime, fmt=fmt)
+        )
+        return self
+
+    def set_index(self, column: str) -> "DataFrame":
+        self.df = self.df.set_sorted(column)
+        return self
+
+    def to_categorical(self, columns: Union[str, List[str]]) -> "DataFrame":
+        if isinstance(columns, str):
+            columns = [columns]
+        validate_column(self.df, columns)
+        for col in columns:
+            self.df = self.df.with_columns(pl.col(col).cast(pl.Categorical))
+        return self
+
+    # 其他常用方法
+    def select(self, expressions):
+        return DataFrame(self.df.select(expressions))
+
+    def filter(self, expression):
+        return DataFrame(self.df.filter(expression))
+
+    def __gt__(self, other):
+        return self.df > other
+
+    def __lt__(self, other):
+        return self.df < other
+
+    def __eq__(self, other):
+        return self.df == other
+
+    def __ne__(self, other):
+        return self.df != other
+
+    def query(self, expression):
+        return DataFrame(self.df.filter(expression))
+
+    def __and__(self, other):
+        return self.df & other.df
+
+    def __or__(self, other):
+        return self.df | other.df
+
+    def __invert__(self):
+        return ~self.df
+
+    def collect(self):
+        if isinstance(self.df, pl.LazyFrame):
+            return self.df.collect()
+        return self
 
     def to_pandas(self):
-        return self.data.to_pandas()
+        return self.df.to_pandas()
 
     def to_csv(self, filepath: str, **kwargs):
-        self.data.write_csv(filepath, **kwargs)
+        self.df.write_csv(filepath, **kwargs)
 
     def to_parquet(self, filepath: str, **kwargs):
-        self.data.write_parquet(filepath, **kwargs)
+        self.df.write_parquet(filepath, **kwargs)
 
     def to_excel(self, filepath: str, **kwargs):
-        self.data.write_excel(filepath, **kwargs)
+        self.df.write_excel(filepath, **kwargs)
+
+    def __getitem__(self, key):
+        if isinstance(key, str):
+            return Series(self.df[key])
+        elif isinstance(key, pl.Expr):
+            return self.df.select(key)
+        elif isinstance(key, slice):
+            return DataFrame(self.df.slice(key.start, key.stop))
+        elif isinstance(key, (list, dict, pl.Series)):
+            # 处理布尔索引
+            if isinstance(key, list):
+                key = pl.Series(key)
+            if isinstance(key, pl.Series) and key.dtype == pl.Boolean:
+                return DataFrame(self.df.filter(key))
+            else:
+                raise NotImplementedError("目前只支持布尔 Series 作为索引")
+        else:
+            raise KeyError(f"Unsupported key type: {type(key)}")
+
+    def __setitem__(self, key, value):
+        if isinstance(value, Series):
+            self.df = self.df.with_columns(value._series.alias(key))
+        else:
+            self.df = self.df.with_columns(pl.Series(key, value))
+
+    def __len__(self):
+        return len(self.df)
+
+    def __getattr__(self, name):
+        if name in self.df.columns:
+            return Series(self.df[name])
+        # 其他 DataFrame 方法的简单传递
+        return getattr(self.df, name)
+
+    def __repr__(self):
+        return self.df.__repr__()
 
 
 class GroupBy:

@@ -15,15 +15,15 @@ df3 = pa.DataFrame(
 
 def test_concat():
     # 创建两个简单的 DataFrame
-    df1 = pa.DataFrame(pl.DataFrame({"A": [1, 2], "B": [3, 4]}))
-    df2 = pa.DataFrame(pl.DataFrame({"A": [5, 6], "B": [7, 8]}))
+    df1 = pa.DataFrame({"A": [1, 2], "B": [3, 4]})
+    df2 = pa.DataFrame({"A": [5, 6], "B": [7, 8]})
 
     # 使用 pa.concat 按行合并
     combined = pa.concat([df1, df2], axis=0)
 
     # 断言合并后的结果
-    expected_data = pl.DataFrame({"A": [1, 2, 5, 6], "B": [3, 4, 7, 8]})
-    assert combined.data.equals(expected_data)
+    expected_data = pa.DataFrame({"A": [1, 2, 5, 6], "B": [3, 4, 7, 8]})
+    assert combined.df.equals(expected_data)
 
 
 def test_concat1():
@@ -41,7 +41,7 @@ def test_merge():
 
     # 断言合并后的结果
     expected_data = pl.DataFrame({"key": [1, 2], "A": [3, 4], "B": [5, 6]})
-    assert merged.data.equals(expected_data)
+    assert merged.df.equals(expected_data)
 
 
 def test_head():
