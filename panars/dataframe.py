@@ -160,21 +160,37 @@ class DataFrame:
         return self.multiply(other)
 
     def pivot(
-        self, pivot_column: str, values_column: str, aggregate_func: str = "first"
+        self, index: str, columns: str, values: str, aggregate_function: str = "first"
     ) -> "DataFrame":
-        pivoted = self.df.pivot(values_column, pivot_column, aggregate_func)
+        pivoted = self.df.pivot(
+            index=index,
+            columns=columns,
+            values=values,
+            aggregate_function=aggregate_function
+        )
         return DataFrame(pivoted)
 
     def melt(
-        self, id_vars: Union[str, List[str]], value_vars: Union[str, List[str]]
+        self, id_vars: Union[str, List[str]], value_vars: Union[str, List[str]],
+        variable_name: str = "variable", value_name: str = "value"
     ) -> "DataFrame":
-        melted = self.df.melt(id_vars=id_vars, value_vars=value_vars)
+        melted = self.df.melt(
+            id_vars=id_vars,
+            value_vars=value_vars,
+            variable_name=variable_name,
+            value_name=value_name
+        )
         return DataFrame(melted)
 
     def to_datetime(self, column: str, fmt: str = None) -> "DataFrame":
-        self.df = self.df.with_columns(
-            pl.col(column).str.strptime(pl.Datetime, fmt=fmt)
-        )
+        if fmt:
+            self.df = self.df.with_columns(
+                pl.col(column).str.strptime(pl.Datetime, fmt)
+            )
+        else:
+            self.df = self.df.with_columns(
+                pl.col(column).cast(pl.Datetime)
+            )
         return self
 
     def set_index(self, column: str) -> "DataFrame":
@@ -331,3 +347,4 @@ class GroupBy:
             raise NotImplementedError(
                 f"Aggregation function '{func}' is not implemented"
             )
+

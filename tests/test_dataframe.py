@@ -105,7 +105,7 @@ def test_map():
 
     wrapped_df = pa.DataFrame(df)
 
-    # 对每一行应用函数 (axis=0)
+    # 每一行应用函数 (axis=0)
     mapped_df_by_row = wrapped_df.map(lambda row: [x + 1 for x in row], axis=0)
     print("Apply to rows:")
     print(mapped_df_by_row)
@@ -158,3 +158,65 @@ def test_show():
 
 def test_to_csv():
     df.to_csv("/tmp/df.csv")
+
+
+
+def test_dataframe_creation():
+    data = {"A": [1, 2, 3], "B": [4, 5, 6], "C": [7, 8, 9]}
+    df = pa.DataFrame(data)
+    assert len(df) == 3
+    assert df["A"].to_list() == [1, 2, 3]
+
+
+def test_arithmetic_operations():
+    data = {"A": [1, 2, 3], "B": [4, 5, 6], "C": [7, 8, 9]}
+    df = pa.DataFrame(data)
+    df2 = df + 1
+    assert df2["A"].to_list() == [2, 3, 4]
+    df3 = df * 2
+    assert df3["B"].to_list() == [8, 10, 12]
+
+
+def test_comparison_operations():
+    data = {"A": [1, 2, 3], "B": [4, 5, 6], "C": [7, 8, 9]}
+    df = pa.DataFrame(data)
+    filtered_df = df[df["A"] > 1]
+    assert len(filtered_df) == 2
+
+
+def test_groupby_and_aggregation():
+    data = {"A": [1, 2, 3], "B": [4, 5, 6], "C": [7, 8, 9]}
+    df = pa.DataFrame(data)
+    grouped = df.groupby("A").agg({"B": "sum", "C": ["min", "max"]})
+    assert len(grouped) == 3
+    assert "B_sum" in grouped.df.columns
+    assert "C_min" in grouped.df.columns
+    assert "C_max" in grouped.df.columns
+
+
+def test_to_datetime():
+    date_data = {"date": ["2021-01-01", "2021-01-02", "2021-01-03"]}
+    date_df = pa.DataFrame(date_data)
+    date_df = date_df.to_datetime("date", fmt="%Y-%m-%d")
+    assert pl.Datetime in date_df.df.dtypes
+
+
+def test_to_categorical():
+    cat_data = {"category": ["A", "B", "A", "C", "B"]}
+    cat_df = pa.DataFrame(cat_data)
+    cat_df = cat_df.to_categorical("category")
+    assert pl.Categorical in cat_df.df.dtypes
+
+
+def test_pivot():
+    pivot_data = {"id": [1, 1, 2], "var": ["A", "B", "A"], "value": [10, 20, 30]}
+    pivot_df = pa.DataFrame(pivot_data)
+    pivoted = pivot_df.pivot(index="id", columns="var", values="value")
+    assert "A" in pivoted.df.columns and "B" in pivoted.df.columns
+
+
+def test_melt():
+    melt_data = {"id": [1, 2], "A": [10, 30], "B": [20, 40]}
+    melt_df = pa.DataFrame(melt_data)
+    melted = melt_df.melt(id_vars=["id"], value_vars=["A", "B"])
+    assert "variable" in melted.df.columns and "value" in melted.df.columns
