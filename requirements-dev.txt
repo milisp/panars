@@ -1,0 +1,6 @@
+polars>=1.10.0
+pandas
+fastexcel
+xlsxwriter
+pyarrow
+pytest-cov
