@@ -62,7 +62,6 @@ class DataFrame:
 
     # 实现 loc 方法，支持使用布尔条件
     def loc(self, condition):
-        print(condition)
         if isinstance(condition, pl.Expr):
             # 使用 Polars 的 filter 方法进行过滤
             return DataFrame(self.data.filter(condition))
@@ -110,7 +109,6 @@ class DataFrame:
         return len(self.data)
 
     def filter(self, mask):
-        print(mask)
         return DataFrame(self.data.filter(mask))
 
     @staticmethod
@@ -141,12 +139,23 @@ class DataFrame:
         else:
             raise ValueError("Axis must be 0 (rows) or 1 (columns)")
 
-
     def isin(self, column, values):
         return self.data[column].is_in(values)
 
     def show(self):
         print(self.data)
+
+    def to_pandas(self):
+        return self.data.to_pandas()
+
+    def to_csv(self, filepath: str, **kwargs):
+        self.data.write_csv(filepath, **kwargs)
+
+    def to_parquet(self, filepath: str, **kwargs):
+        self.data.write_parquet(filepath, **kwargs)
+
+    def to_excel(self, filepath: str, **kwargs):
+        self.data.write_excel(filepath, **kwargs)
 
 
 class GroupBy:

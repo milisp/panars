@@ -1,4 +1,5 @@
 import polars as pl
+import pytest
 
 import panars as pa
 
@@ -23,6 +24,11 @@ def test_concat():
     # 断言合并后的结果
     expected_data = pl.DataFrame({"A": [1, 2, 5, 6], "B": [3, 4, 7, 8]})
     assert combined.data.equals(expected_data)
+
+
+def test_concat1():
+    df4 = pa.DataFrame({"D": ["foo", "bar"]})
+    pa.concat([df4, df2], axis=1)
 
 
 def test_merge():
@@ -52,11 +58,19 @@ def test_mean():
 
 def test_sum():
     df.sum()
+    df.sum(axis=1)
 
 
 def test_groupby():
     df3.groupby(["C", "city"]).agg({"A": "mean", "B": ["min", "count", "max", "sum"]})
     df.groupby("C").sum()
+
+    df_grouped = df.groupby("C")
+
+    df_grouped.mean()
+    df_grouped.max()
+    df_grouped.min()
+    df_grouped.count()
 
 
 def test_filter():
@@ -72,7 +86,14 @@ def test_filter2():
 
 
 def test_drop():
-    print(df.drop(["A"]))
+    df.drop(["A"])
+
+
+def test_drop_axis0():
+    with pytest.raises(
+        ValueError, match="Polars only supports dropping columns \(axis=1\)"
+    ):
+        df.drop("A", axis=0)
 
 
 def add(x):
@@ -97,7 +118,14 @@ def test_map():
 
 def test_isin():
     print(df.filter(df["A"].isin([8, 9])))
-    print(df.filter(df["A"].isin([3, 9])))
+
+
+def test_isin1():
+    print(df.isin("A", [3, 9]))
+
+
+def test_isin2():
+    print(df[df["A"].isin([3, 9])])
 
 
 def test_isna():
@@ -108,9 +136,25 @@ def test_is_not_null():
     print(df.filter(df["A"].is_not_null()))
 
 
+def test_ne():
+    df[df["A"] != 3]
+
+
 def test_add_series():
-    print(df["A"] + df["B"])
+    df["A"] + df["B"]
 
 
 def test_to_pandas():
-    df["A"].to_pandas()
+    df.to_pandas()
+
+
+def test_len():
+    len(df)
+
+
+def test_show():
+    df.show()
+
+
+def test_to_csv():
+    df.to_csv("/tmp/df.csv")
