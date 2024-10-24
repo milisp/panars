@@ -252,3 +252,8 @@ def test_sort_values():
     assert grouped_sorted["A"].to_list() == [1, 2]
     assert grouped_sorted["B_sum"].to_list() == [7, 3]
     assert grouped_sorted["C_mean"].to_list() == [15.0, 35.0]
+def test_rename():
+    df = pa.DataFrame({"A": [1, 2, 3], "B": [4, 5, 6]})
+    renamed_df = df.rename({"A": "X", "B": "Y"})
+    assert renamed_df["X"].to_list() == [1, 2, 3]
+    assert renamed_df["Y"].to_list() == [4, 5, 6]

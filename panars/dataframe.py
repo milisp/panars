@@ -297,6 +297,19 @@ class DataFrame:
     def __repr__(self):
         return self.df.__repr__()
 
+    def rename(self, columns: dict) -> "DataFrame":
+        """
+        Rename columns of the DataFrame.
+
+        Args:
+            columns (dict): A dictionary mapping old column names to new column names.
+
+        Returns:
+            DataFrame: A new DataFrame with renamed columns.
+        """
+        renamed_df = self.df.rename(columns)
+        return DataFrame(renamed_df)
+
 class GroupBy:
     def __init__(self, df, by):
         self._df = df
