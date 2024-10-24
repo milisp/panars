@@ -38,4 +38,4 @@ xlsxwriter = ["xlsxwriter"]
 excel = ["polars[calamine,openpyxl,xlsx2csv,xlsxwriter]"]
 
 [tool.ruff]
-extend-ignore = ["E501"]  # Line too long
+line-length = 120  # Line too long
