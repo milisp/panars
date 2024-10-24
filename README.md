@@ -50,6 +50,54 @@ print(result)
 
 For detailed usage instructions and API reference, visit our [documentation](https://github.com/milisp/panars/wiki).
 
+## ToDo some api
+
+### dataframe
+
+#### IO
+ - [x] read_csv
+ - [x] to_csv
+ - [x] read_excel
+ - [x] to_excel
+ - [x] read_parquet
+ - [x] to_parquet
+
+#### Data manipulations
+ - [x] groupby
+ - [x] melt
+ - [x] pivot
+ - [x] merge
+ - [x] concat
+
+#### Top-level missing data
+ - [x] isnull
+
+#### Top-level dealing with datetimelike dat
+ - [x] to_datetime
+ - [x] agg
+ - [x] map
+ - [x] apply
+ - [x] rename
+
+#### info
+ - [x] head
+ - [x] tail
+ - [x] info
+ - [x] describe
+
+#### groupby
+ - [x] sum
+ - [x] mean
+ - [x] max
+ - [x] min
+ - [x] count
+
+#### other
+ - [x] fillna
+ - [x] dropna
+ - [x] drop
+ - [x] len
+
 ## Contributing
 
 We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for more details.
